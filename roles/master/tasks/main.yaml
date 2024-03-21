@@ -1,0 +1,150 @@
+---
+
+- name: Get bgp_address for masters
+  ansible.builtin.set_fact:
+    bgp_addresses: |-
+      {%- set addresses = [] %}
+      {%- for h, v in hostvars.items() %}
+      {%- if 'bgp_address' in v %}
+      {%- do addresses.append(v.bgp_address) %}
+      {%- endif %}
+      {%- endfor %}
+      {{ addresses | list }}
+
+- name: Template kube-vip static pods deployment
+  ansible.builtin.template:
+    src: templates/kube-vip.yaml.j2
+    dest: /etc/kubernetes/manifests/kube-vip.yaml
+    mode: "0755"
+  become: true
+
+- name: Download Cilium
+  ansible.builtin.get_url:
+    url: https://github.com/cilium/cilium-cli/releases/download/v{{ cilium_cli_version }}/cilium-linux-arm64.tar.gz
+    checksum: sha256:https://github.com/cilium/cilium-cli/releases/download/v{{ cilium_cli_version }}/cilium-linux-arm64.tar.gz.sha256sum
+    dest: /home/ubuntu
+    mode: "755"
+  when: initial_master is defined
+
+- name: Extract cilium
+  ansible.builtin.unarchive:
+    src: /home/ubuntu/cilium-linux-arm64.tar.gz
+    dest: /home/ubuntu/bin
+    remote_src: true
+  when: initial_master is defined
+
+- name: Register check for k8s initialization
+  ansible.builtin.stat:
+    path: .kube/config
+  register: kube_config
+
+- name: Consider node initialized if kubeconfig exists
+  ansible.builtin.set_fact:
+    kube_initialized: "{{ kube_config.stat.exists }}"
+
+- name: Bootstrap initial master node
+  ansible.builtin.command:
+    cmd: kubeadm init --control-plane-endpoint "k8s.lan:6443" --upload-certs
+  become: true
+  args:
+    creates: /etc/kubernetes/admin.conf
+  when:
+    - initial_master is defined
+    - not kube_initialized
+
+- name: Generate master join command
+  become: true
+  ansible.builtin.shell:
+    cmd: >
+      echo $(kubeadm token create --print-join-command)
+      --control-plane
+      --certificate-key $(kubeadm init phase upload-certs --upload-certs | grep -vw -e certificate -e Namespace) > /tmp/master-join.sh
+  when: initial_master is defined
+
+- name: Get master join command
+  become: true
+  ansible.builtin.fetch:
+    src: /tmp/master-join.sh
+    dest: /tmp/
+    flat: true
+  when: initial_master is defined
+
+- name: Generate worker join command
+  become: true
+  ansible.builtin.shell:
+    cmd: kubeadm token create --print-join-command > /tmp/worker-join.sh
+  when: initial_master is defined
+
+- name: Get worker join command
+  become: true
+  ansible.builtin.fetch:
+    src: /tmp/worker-join.sh
+    dest: /tmp/
+    flat: true
+  when: initial_master is defined
+
+- name: Create .kube dir
+  ansible.builtin.file:
+    path: /home/ubuntu/.kube
+    state: directory
+    mode: "0700"
+  when: initial_master is defined
+
+- name: Copy admin.conf to user's kube config
+  become: true
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /home/ubuntu/.kube/config
+    remote_src: true
+    owner: ubuntu
+    mode: "0600"
+  when: initial_master is defined
+
+- name: Check Cilium
+  ansible.builtin.command:
+    cmd: /home/ubuntu/bin/cilium status
+  ignore_errors: true
+  register: cilium_status
+  when: initial_master is defined
+
+- name: Install Cilium
+  ansible.builtin.shell:
+    cmd: /home/ubuntu/bin/cilium install --version {{ cilium_version }}
+  when:
+    - initial_master is defined
+    - cilium_status.rc != 0
+
+- name: Check Cilium
+  ansible.builtin.command:
+    cmd: /home/ubuntu/bin/cilium status
+  when: initial_master is defined
+  retries: 5
+  delay: 3
+
+- name: Verify if node has joined cluster # noqa: command-instead-of-module
+  ansible.builtin.shell:
+    cmd: "curl http://localhost:10248/healthz || true"
+  register: health
+  when: initial_master is not defined
+
+- name: Register fact for checking is node has joined
+  ansible.builtin.set_fact:
+    kube_joined: "{{ health.stdout == 'ok' }}"
+  when: initial_master is not defined
+
+- name: Copy master join script
+  ansible.builtin.copy:
+    src: /tmp/master-join.sh
+    dest: /tmp/master-join.sh
+    mode: "0700"
+  when:
+    - initial_master is not defined
+    - not kube_joined
+
+- name: Join other masters
+  become: true
+  ansible.builtin.shell:
+    cmd: sh /tmp/master-join.sh
+  when:
+    - initial_master is not defined
+    - not kube_joined

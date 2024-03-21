@@ -1,0 +1,20 @@
+---
+
+- name: Apply common configuration on all hosts
+  hosts: all
+  remote_user: ubuntu
+  become: true
+  roles:
+    - common
+
+- name: Configure masters
+  hosts: masters
+  remote_user: ubuntu
+  roles:
+    - master
+
+- name: Configure workers
+  hosts: workers
+  remote_user: ubuntu
+  roles:
+    - worker

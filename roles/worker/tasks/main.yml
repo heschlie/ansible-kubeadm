@@ -1,0 +1,25 @@
+---
+
+- name: Verify if node has joined cluster # noqa: command-instead-of-module
+  ansible.builtin.shell:
+    cmd: "curl http://localhost:10248/healthz || true"
+  register: health
+  changed_when: false
+
+- name: Register fact for checking is node has joined
+  ansible.builtin.set_fact:
+    kube_joined: "{{ health.stdout == 'ok' }}"
+
+- name: Copy worker join command
+  become: true
+  ansible.builtin.copy:
+    src: /tmp/worker-join.sh
+    dest: /tmp/worker-join.sh
+    mode: "0700"
+  when: not kube_joined
+
+- name: Join to cluster
+  become: true
+  ansible.builtin.shell:
+    cmd: /tmp/worker-join.sh
+  when: not kube_joined

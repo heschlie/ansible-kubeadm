@@ -1,0 +1,4 @@
+k8s_version: 1.29.2
+k8s_version_major: 1.29
+cilium_cli_version: 0.16.0
+cilium_version: 1.15.2

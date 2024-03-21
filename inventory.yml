@@ -1,0 +1,18 @@
+masters:
+  hosts:
+    k8s-master-0:
+      initial_master:
+      bgp_address: 192.168.16.100
+    k8s-master-1:
+      bgp_address: 192.168.16.101
+    k8s-master-2:
+      bgp_address: 192.168.16.102
+workers:
+  hosts:
+    k8s-worker-0:
+    k8s-worker-1:
+    k8s-worker-2:
+    k8s-worker-3:
+    k8s-worker-4:
+    k8s-worker-5:
+    k8s-worker-6:
