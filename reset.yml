@@ -1,0 +1,34 @@
+---
+
+- name: Reset kubeadm
+  hosts: all
+  become: true
+  remote_user: ubuntu
+
+  tasks:
+
+  - name: Reset kubeadm
+    ansible.builtin.command:
+      cmd: kubeadm reset -f
+
+  - name: Remove kubeconfig
+    ansible.builtin.file:
+      name: /home/ubuntu/.kube/config
+      state: absent
+
+  - name: Remove CNI dir
+    ansible.builtin.file:
+      name: /etc/cni/net.d
+      state: absent
+
+  - name: Remove join.txt
+    ansible.builtin.file:
+      name: /home/ubuntu/join.txt
+      state: absent
+
+  - name: Clear iptables
+    ansible.builtin.script:
+      cmd: scripts/iptables.sh
+
+  - name: Reboot
+    ansible.builtin.reboot:

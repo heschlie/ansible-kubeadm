@@ -17,16 +17,20 @@ spec:
       value: lo
     - name: vip_cidr
       value: "32"
+    - name: dns_mode
+      value: first
     - name: cp_enable
       value: "true"
     - name: cp_namespace
       value: kube-system
+    - name: svc_enable
+      value: "true"
     - name: vip_ddns
       value: "false"
     - name: bgp_enable
       value: "true"
     - name: bgp_routerid
-      value: 192.168.16.2
+      value: {{ bgp_address}}
     - name: bgp_as
       value: "65000"
     - name: bgp_peeraddress
@@ -35,13 +39,12 @@ spec:
       value: "65000"
     - name: bgp_peers
       value: {% for b in bgp_addresses | reject('search', hostvars[inventory_hostname].bgp_address) -%}
-               {{ b }}:65000::false
-               {%- if not loop.last %},{% endif %}
-             {%- endfor %}
+               {{ b }}:65000::false,
+             {%- endfor -%}192.168.16.1:65000::false
 
     - name: address
-      value: 192.168.16.10
-    image: ghcr.io/kube-vip/kube-vip:v0.7.2
+      value: {{ control_plane_vip}}
+    image: ghcr.io/kube-vip/kube-vip:v{{ kube_vip_version }}
     imagePullPolicy: Always
     name: kube-vip
     resources: {}
