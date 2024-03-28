@@ -1,18 +1,18 @@
 masters:
   hosts:
-    k8s-master-0:
+    k8s-controller-0.k8s:
       initial_master:
       bgp_address: 192.168.16.100
-    k8s-master-1:
+    k8s-controller-1.k8s:
       bgp_address: 192.168.16.101
-    k8s-master-2:
+    k8s-controller-2.k8s:
       bgp_address: 192.168.16.102
 workers:
   hosts:
-    k8s-worker-0:
-    k8s-worker-1:
-    k8s-worker-2:
-    k8s-worker-3:
-    k8s-worker-4:
-    k8s-worker-5:
-    k8s-worker-6:
+    k8s-node-0.k8s:
+    k8s-node-1.k8s:
+    k8s-node-2.k8s:
+    k8s-node-3.k8s:
+    k8s-node-4.k8s:
+    k8s-node-5.k8s:
+    k8s-node-6.k8s:
