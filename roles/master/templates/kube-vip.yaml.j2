@@ -9,6 +9,8 @@ spec:
   - args:
     - manager
     env:
+    - name: vip_loglevel
+      value: "5"
     - name: vip_arp
       value: "false"
     - name: port
@@ -40,7 +42,7 @@ spec:
     - name: bgp_peers
       value: {% for b in bgp_addresses | reject('search', hostvars[inventory_hostname].bgp_address) -%}
                {{ b }}:65000::false,
-             {%- endfor -%}192.168.16.1:65000::false
+             {%- endfor -%}192.168.16.1:65001::false
 
     - name: address
       value: {{ control_plane_vip}}
