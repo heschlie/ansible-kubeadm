@@ -1,0 +1,8 @@
+network:
+  version: 2
+  ethernets:
+    big-mtu:
+      match:
+        name: eth*
+      mtu: "9000"
+      dhcp4: true

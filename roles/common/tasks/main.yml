@@ -41,6 +41,25 @@
       - docker-ce-cli={{ docker_version }}
       - containerd.io={{ containerd_version }}
       - stress-ng
+      - nfs-common
+
+- name: Hold important packages
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop:
+    - kubectl
+    - kubeadm
+    - docker-ce
+    - docker-ce-cli
+    - containerd.io
+
+- name: Set nfs mount options
+  ansible.builtin.template:
+    src: templates/nfsmount.conf
+    dest: /etc/nfsmount.conf
+    mode: "0755"
+  become: true
 
 - name: Configure kubernetes networking
   ansible.posix.sysctl:
@@ -51,6 +70,13 @@
     - { name: 'net.ipv4.ip_forward', value: '1'}
     - { name: 'net.bridge.bridge-nf-call-iptables', value: '1'}
     - { name: 'net.bridge.bridge-nf-call-ip6tables', value: '1'}
+
+- name: Set MTU to 9000
+  ansible.builtin.template:
+    src: templates/10-mtu.yaml
+    dest: /etc/netplan/10-mtu.yaml
+    mode: "0755"
+  become: true
 
 - name: Enable CRI driver for containerd
   ansible.builtin.lineinfile:
