@@ -37,8 +37,10 @@
     pkg:
       - kubectl={{ k8s_version }}
       - kubeadm={{ k8s_version }}
+      - kubelet={{ k8s_version }}
       - docker-ce={{ docker_version }}
       - docker-ce-cli={{ docker_version }}
+      - docker-ce-rootless-extras={{ docker_version }}
       - containerd.io={{ containerd_version }}
       - stress-ng
       - nfs-common
@@ -50,8 +52,10 @@
   loop:
     - kubectl
     - kubeadm
+    - kubelet
     - docker-ce
     - docker-ce-cli
+    - docker-ce-rootless-extras
     - containerd.io
 
 - name: Set nfs mount options
