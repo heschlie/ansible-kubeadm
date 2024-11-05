@@ -1,0 +1,16 @@
+---
+
+# Uncomment this if you wish to upgrade the controllers automatically, I prefer to do the conrtollers manually
+# - name: Upgrade controllers
+#   hosts: masters
+#   remote_user: ubuntue
+#   serial: 1
+#   roles:
+#     - upgrade
+
+- name: Upgrade workers
+  hosts: workers
+  remote_user: ubuntu
+  serial: 1
+  roles:
+    - upgrade

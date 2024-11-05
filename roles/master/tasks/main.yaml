@@ -107,6 +107,7 @@
   register: cilium_status
   when: initial_master is defined
 
+# This install method was deprecated recently, and we should migrate to using the helm install, preferrably via kustomizes helm so it is easier to adopt into Argo.
 - name: Install Cilium
   ansible.builtin.shell:
     cmd: /home/ubuntu/bin/cilium install --version {{ cilium_version }}

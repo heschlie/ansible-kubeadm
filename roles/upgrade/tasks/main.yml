@@ -1,0 +1,114 @@
+---
+
+- name: Add k8s apt key
+  become: true
+  ansible.builtin.apt_key:
+    url: https://pkgs.k8s.io/core:/stable:/v{{ k8s_version_major }}/deb/Release.key
+    keyring: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+- name: Add k8s apt repos
+  become: true
+  ansible.builtin.apt_repository:
+    repo: deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v{{ k8s_version_major }}/deb/ /
+    state: present
+    filename: kubernetes
+
+- name: Apt upgrade
+  become: true
+  ansible.builtin.apt:
+    update_cache: true
+    upgrade: true
+
+- name: Unhold kubeadm
+  become: true
+  ansible.builtin.dpkg_selections:
+    name: kubeadm
+    selection: install
+
+- name: Upgrade kubeadm packages
+  become: true
+  ansible.builtin.apt:
+    state: present
+    update_cache: true
+    pkg:
+      - kubeadm={{ k8s_version }}
+
+- name: Hold kubeadm
+  become: true
+  ansible.builtin.dpkg_selections:
+    name: kubeadm
+    selection: hold
+
+- name: Kubeadm plan
+  become: true
+  ansible.builtin.command:
+    cmd: kubeadm upgrade plan
+  when: initial_master is defined
+
+- name: Upgrade first controller
+  become: true
+  ansible.builtin.command:
+    cmd: kubeadm upgrade apply -y {{ k8s_version_patch }}
+  when: initial_master is defined
+
+- name: Upgrade other nodes
+  become: true
+  ansible.builtin.command:
+    cmd: kubeadm upgrade node
+  when: initial_master is not defined
+
+- name: Drain node
+  ansible.builtin.command:
+    cmd: kubectl drain {{ inventory_hostname_short }} --ignore-daemonsets --delete-emptydir-data --grace-period=30 --timeout=300
+  delegate_to: localhost
+
+- name: Unhold important packages
+  become: true
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: install
+  loop:
+    - kubectl
+    - kubelet
+    - docker-ce
+    - docker-ce-cli
+    - docker-ce-rootless-extras
+    - containerd.io
+
+- name: Upgrade important packages
+  become: true
+  ansible.builtin.apt:
+    state: present
+    update_cache: true
+    pkg:
+      - kubectl={{ k8s_version }}
+      - kubelet={{ k8s_version }}
+      - docker-ce={{ docker_version }}
+      - docker-ce-cli={{ docker_version }}
+      - docker-ce-rootless-extras={{ docker_version }}
+      - containerd.io={{ containerd_version }}
+
+- name: Hold important packages
+  become: true
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop:
+    - kubectl
+    - kubelet
+    - docker-ce
+    - docker-ce-cli
+    - docker-ce-rootless-extras
+    - containerd.io
+
+- name: Restart kubelet
+  become: true
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+    state: restarted
+    name: kubelet
+
+- name: Uncordon node
+  ansible.builtin.command:
+    cmd: kubectl uncordon {{ inventory_hostname_short }}
+  delegate_to: localhost

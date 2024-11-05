@@ -3,7 +3,27 @@
 This playbook is for standing up my Orange Pi 5 cluster with and HA control plane and ability
 to expose services via a load balancer, thanks to kube-vip.
 
-## Background
+# Roles
+
+## Common
+
+The common stuff to install things needed on all nodes, docker, kubeadm, etc...
+
+## Master
+
+The controller node role, this sets up the controller nodes to run with a stacked etcd setup with static manifests. This will install all the special stuff on the node defined with the `initial_master` key.
+
+## Worker
+
+Role for the worker nodes, this is a simpler setup as it just needs to join the nodes to the cluster for scheduling.
+
+## Upgrade
+
+This is run with the upgrade playbook to upgrade the nodes to the desired version.
+
+You should at least sign on to the `initial_master` node, upgrade `kubeadm` to the desired version, then do a `kubeadm upgrade plan $VERSION` and make sure it is clean, and note down if it recommends any manual updates post upgrade.
+
+# Background
 
 This is not built to be a generic, anyone can use it, kind of thing, but if it helps someone
 in some way, that's awesome.
